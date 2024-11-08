@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const usersSchema = mongoose.Schema({
+  avatar: String,
   pseudo: String,
   capoeiraGroup: String,
   token: String,

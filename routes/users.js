@@ -14,8 +14,9 @@ router.get('/', (req,res) => {
   })
 } )
 
-//vérification champs vide
+//route pour l'inscription de l'utilisateur
 router.post('/signup', (req, res) => {
+  //vérification champs vide
   if(!req.body.pseudo || !req.body.email || !req.body.password){
     res.json({result:false, error:'fill the fields'})
     return
@@ -47,6 +48,7 @@ router.post('/signup', (req, res) => {
 
      //creation nouvel utilisateur dans la BDD
       const newUser = new User({
+        avatar: req.body.avatar,
         pseudo: req.body.pseudo,
         capoeiraGroup: req.body.capoeiraGroup,
         email: email,
@@ -65,6 +67,45 @@ router.post('/signup', (req, res) => {
         res.json({ result: false, error: 'error saving user' });
       });
     
+  })
+})
+
+//route pour la connection de l'utilisateur
+router.post('/signin', (req, res) => {
+  const password = req.body.password
+    //vérification champs vide
+    if(!req.body.email || !req.body.password){
+      res.json({result:false, error:'fill the fields'})
+      return
+    }
+
+    User.findOne({email: req.body.email}).then((userData) => {
+      //maj du token
+      if (userData && bcrypt.compareSync(password, userData.password)) {
+        const token = uid2(32);
+        userData.token = token;
+        userData
+          .save()
+          .then(() => {
+            res.json({
+              result: true,
+              token: userData.token,
+              pseudo: userData.pseudo,
+            });
+          })
+      } else {
+        res.json({ result: false, error: "wrong email or password" });
+      }
+    })
+})
+
+//route pour Récupérer les informations de l'utilisateur
+router.get('/signin', (req, res) => {
+  User.findOne({token: token}).then((userData) => {
+    res.json({result: true, 
+              avatar: userData.avatar,
+              pseudo: userData.pseudo,
+    })
   })
 })
 
