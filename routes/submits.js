@@ -13,7 +13,7 @@ router.get('/', (req, res) => {
 })
 
 
-//route POST new submits Song
+//route POST new submits 
 router.post('/', async (req, res) => {
 
     try {
@@ -28,19 +28,25 @@ router.post('/', async (req, res) => {
             secondaryTitle = "unknown"
         }
 
-        const submitData = await Submit.findOne({type: req.body.type, title: req.body.title })
+        const submitData = await Submit.findOne({ type: req.body.type, title: req.body.title })
         console.log("submitData", submitData)
         if (submitData) {
             res.json({ result: false, error: "title already used" });
             return
         } else {
+
+            if (!Array.isArray(req.body.links)) {
+                return res.status(400).json({ message: "'links' doit être un tableau d'objets" });
+              }
+
             const newSubmit = new Submit({
                 type: req.body.type,
                 title: req.body.title,
                 secondaryTitle: secondaryTitle,
+                secondaryType: req.body.secondaryType,
                 mainText: req.body.mainText,
                 reasearchText: req.body.reasearchText,
-                link: req.body.link,
+                links: req.body.links ,
                 createdBy: req.body.createdBy,
                 creationDate: Date.now(),
                 latestUpdate: Date.now(),
@@ -52,16 +58,15 @@ router.post('/', async (req, res) => {
                 type: data.type,
                 title: data.title,
                 secondaryTitle: data.secondaryTitle,
+                secondaryType: data.secondaryType,
                 mainText: data.mainText,
-                reasearchText: data.reasearchText,
-                link: data.link,
+                links: data.links,
                 createdBy: data.createdBy,
                 creationDate: data.creationDate,
                 latestUpdate: data.latestUpdate,
                 authorised: data.authorised
             });
-
-
+        
         }
     } catch (error) {
         console.error(error);
@@ -90,16 +95,6 @@ router.post('/search', (req, res) => {
 
     }
 })
-// if(req.body.search){
-//     const search = []
-//     search.push(req.body.search)
-//     for (let i = 0; i < search.length; i++) {
-//         Submit.find({ textSearch: search[i] }).then((submitText) => {
-//             res.json(submitText)
-//         })
-//     }
-// }
 
-// })
 
 module.exports = router;
