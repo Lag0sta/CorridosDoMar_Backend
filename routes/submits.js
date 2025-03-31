@@ -14,7 +14,7 @@ router.get('/', (req, res) => {
 
 
 //route POST new submits 
-router.post('/', async (req, res) => {
+router.post('/',async (req, res) => {
 
     try {
 
@@ -34,10 +34,6 @@ router.post('/', async (req, res) => {
             res.json({ result: false, error: "title already used" });
             return
         } else {
-
-            if (!Array.isArray(req.body.links)) {
-                return res.status(400).json({ message: "'links' doit être un tableau d'objets" });
-              }
 
             const newSubmit = new Submit({
                 type: req.body.type,
@@ -74,7 +70,6 @@ router.post('/', async (req, res) => {
     }
 
 })
-
 
 router.post('/search', (req, res) => {
     if (!req.body.title) {
