@@ -6,6 +6,7 @@
     "start": "node ./bin/www"
   },
   "dependencies": {
+    "@types/express": "^5.0.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",
     "cookie-parser": "~1.4.4",
@@ -20,6 +21,13 @@
     "morgan": "~1.9.1",
     "multer": "^1.4.5-lts.2",
     "nodemailer": "^6.9.16",
+    "tsc": "^2.0.4",
+    "typescript": "^5.8.2",
     "uid2": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/mongoose": "^5.11.97",
+    "@types/node": "^22.13.17",
+    "ts-node": "^10.9.2"
   }
 }
