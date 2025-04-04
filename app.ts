@@ -3,10 +3,11 @@ require('dotenv').config();
 
 // Importer les modules nécessaires
 import express from 'express';
+import { connectToDatabase } from './models/connection';
+
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
-import { connectToDatabase } from './models/connection';
 
 // Se connecter à la base de données
 connectToDatabase()
