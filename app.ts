@@ -1,22 +1,22 @@
 // Charger les variables d'environnement à partir du fichier .env
-require('dotenv').config();
-
+import * as dotenv from 'dotenv';
+dotenv.config();
 // Importer les modules nécessaires
 import express from 'express';
-import { connectToDatabase } from './models/connection';
-
-const path = require('path');
-const cookieParser = require('cookie-parser');
-const logger = require('morgan');
+import { connectToDatabase } from './models/connection.js';
+import path from 'path';
+import cookieParser from 'cookie-parser';
+import logger from 'morgan';
 
 // Se connecter à la base de données
 connectToDatabase()
 
 
 // Importer les routeurs
-const indexRouter = require('./routes/index').default;
-const usersRouter = require('./routes/users').default;
-const submitsRouter = require('./routes/submits').default;
+import indexRouter from './routes/index.js';
+import authsRouter from './routes/auths.js';
+import usersRouter from './routes/users.js';
+import submitsRouter from './routes/submits.js';
 
 // Créer l'application Express
 const app = express();
@@ -24,7 +24,14 @@ const app = express();
 // Activer CORS
 const cors = require('cors');
 const { cp } = require('fs');
-app.use(cors());
+const corsOptions = {
+    origin: 'http://localhost:3001',  // Change cela par l'URL de ton frontend
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],  // Définir les méthodes autorisées
+    allowedHeaders: ['Content-Type', 'Authorization'],  // Autoriser les en-têtes spécifiques
+    credentials: true,  // Autoriser l'envoi de cookies (important pour les tokens)
+  };
+app.use(cors(corsOptions));
+
 
 // Définir les middlewares
 app.use(logger('dev'));
@@ -36,6 +43,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Définir les routes
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/auths',authsRouter);
 app.use('/submits',submitsRouter);
 
 
