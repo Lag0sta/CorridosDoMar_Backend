@@ -8,7 +8,6 @@ const router = express.Router();
 
 const nodemailer = require('nodemailer');
 
-const uid2 = require("uid2");
 const bcrypt = require("bcryptjs");
 
 
@@ -67,7 +66,7 @@ router.post('/signup', async (req, res) => {
       result: true,
       pseudo: newUser.pseudo,
       capoeiraGroup: newUser.capoeiraGroup,
-      refreshToken: newUser.refreshToken,
+      accessToken: newUser.accessToken,
     });
   } catch (error) {
     console.error(error);
@@ -106,6 +105,11 @@ router.post('/signin', async (req: Request, res: Response) => {
       process.env.REFRESHSECRETTOKEN_KEY!,
       { expiresIn: '7d' } // Durée de vie plus longue (7 jours)
     );
+
+     // Mettre à jour l'utilisateur avec le nouvel accessToken
+     await User.findByIdAndUpdate(userData.id, {
+      accessToken: accessToken,
+    });
 
     // Envoi du refreshToken dans un cookie httpOnly
     res.cookie('refreshToken', refreshToken, {
@@ -257,5 +261,26 @@ router.put('/resetPassword/:resetPasswordToken', async (req, res): Promise<void>
   }
 })
 
+router.post('/passwordCheck', async (req, res): Promise<void> => {
+  try {
+    const userData = await User.findOneAndUpdate({token: req.body.token})
+
+    if(!userData){
+      res.json({ result: false, message: "User not found" });
+      return;
+    }
+    const isValidPassword = await bcrypt.compare(req.body.password, userData.password);
+
+    if (isValidPassword) {
+      res.json({ result: true, message: "Access granted" });
+      return;
+    } else {
+      res.json({ result: false, message: "Wrong password" });
+      return;
+    }
+  } catch (error) {
+    res.status(500).json({ result: false, message: 'Server error' });
+  }
+})
 
 export default router;

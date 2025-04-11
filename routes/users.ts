@@ -1,29 +1,44 @@
 import express from 'express';
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/users';
-import crypto from 'crypto';
-import * as jwt from 'jsonwebtoken';
-import { SignJWT } from 'jose';  // Importation de SignJWT de la bibliothèque jose
-import { generateJWT } from '../utils/JWT';
+
 
 const router = express.Router();
 
-const nodemailer = require('nodemailer');
-
-const uid2 = require("uid2");
 const bcrypt = require("bcryptjs");
 
 
 /* GET users listing. */
-router.get('/', (req:Request, res:Response) => {
+router.get('/', (req: Request, res: Response) => {
   User.find().then((data) => {
     res.json(data)
 
   })
 })
 
+//GET useProfilInfo
+router.post('/userProfil', async (req: Request, res: Response) => {
+  try {
+    const user = await User.findOne(req.body.token);
+    if (user) {
 
-router.post('/submit', async (req: Request, res: Response) : Promise<void> => {
+      res.json(
+        {
+          avatar: user.avatar,
+          pseudo: user.pseudo,
+          group: user.capoeiraGroup,
+          email: user.email,
+          submits: user.submits
+        });
+    } else {
+      res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+})
+
+router.post('/submit', async (req: Request, res: Response): Promise<void> => {
 
   try {
     const user = await User.findOne({ token: req.body.token });
@@ -39,5 +54,30 @@ router.post('/submit', async (req: Request, res: Response) : Promise<void> => {
 
 })
 
+//route pour modifier les infos de l'utilisateur
+router.put('/update', async (req: Request, res: Response) => {
+  const hash = bcrypt.hashSync(req.body.password, 10);
+  try {
+    const userData = await User.findOneAndUpdate(
+      { token: req.body.token },
+    {
+      $set: {
+        pseudo: req.body.pseudo,
+        group: req.body.group,
+        email: req.body.email,
+        password: hash
+      }
+    },
+    {new: true});
+
+    if (userData) {
+      res.json({ result: true, user: userData });
+    } else {
+      res.json({ result: false, message: "User not found" });
+    } 
+  } catch (error) {
+    res.status(500).json({ result: false, message: 'Server error' });
+  }
+})
 
 export default router;

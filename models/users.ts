@@ -1,3 +1,4 @@
+import { access } from 'fs';
 import * as mongoose from 'mongoose';
 
 const usersSchema = new mongoose.Schema({
@@ -6,7 +7,7 @@ const usersSchema = new mongoose.Schema({
   capoeiraGroup: String, 
   email: String,
   password: String,
-  refreshToken: String,
+  accessToken: String,
   resetPasswordToken: String,
   resetPasswordExpires: Date,
   submits: [{ type: mongoose.Schema.Types.ObjectId, ref: 'submits' }]

@@ -51,7 +51,6 @@ const jwt = __importStar(require("jsonwebtoken"));
 const JWT_1 = require("../utils/JWT");
 const router = express_1.default.Router();
 const nodemailer = require('nodemailer');
-const uid2 = require("uid2");
 const bcrypt = require("bcryptjs");
 /* GET users listing. */
 router.get('/', (req, res) => {
@@ -100,7 +99,7 @@ router.post('/signup', (req, res) => __awaiter(void 0, void 0, void 0, function*
             result: true,
             pseudo: newUser.pseudo,
             capoeiraGroup: newUser.capoeiraGroup,
-            refreshToken: newUser.refreshToken,
+            accessToken: newUser.accessToken,
         });
     }
     catch (error) {
@@ -133,6 +132,10 @@ router.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Génération du refreshToken
         const refreshToken = jwt.sign({ userId: userData.id }, process.env.REFRESHSECRETTOKEN_KEY, { expiresIn: '7d' } // Durée de vie plus longue (7 jours)
         );
+        // Mettre à jour l'utilisateur avec le nouvel accessToken
+        yield users_1.default.findByIdAndUpdate(userData.id, {
+            accessToken: accessToken,
+        });
         // Envoi du refreshToken dans un cookie httpOnly
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
@@ -252,6 +255,27 @@ router.put('/resetPassword/:resetPasswordToken', (req, res) => __awaiter(void 0,
     catch (error) {
         console.error(error);
         res.json({ result: false, error: 'Erreur lors de la mise à jour du mot de passe.' });
+    }
+}));
+router.post('/passwordCheck', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userData = yield users_1.default.findOneAndUpdate({ token: req.body.token });
+        if (!userData) {
+            res.json({ result: false, message: "User not found" });
+            return;
+        }
+        const isValidPassword = yield bcrypt.compare(req.body.password, userData.password);
+        if (isValidPassword) {
+            res.json({ result: true, message: "Access granted" });
+            return;
+        }
+        else {
+            res.json({ result: false, message: "Wrong password" });
+            return;
+        }
+    }
+    catch (error) {
+        res.status(500).json({ result: false, message: 'Server error' });
     }
 }));
 exports.default = router;
