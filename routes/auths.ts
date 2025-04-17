@@ -139,6 +139,7 @@ router.post('/signin', async (req: Request, res: Response) => {
 
 router.post('/refresh-token', async (req: Request, res: Response) => {
   const refreshToken = req.cookies.refreshToken; // Lire le refresh token du cookie
+  console.log('Refresh token reçu:', refreshToken);
 
   if (!refreshToken) {
     return void
@@ -169,10 +170,13 @@ router.post('/refresh-token', async (req: Request, res: Response) => {
 });
 
 router.post('/forgotPassword', async (req, res): Promise<void> => {
+  console.log("Demande de réinitialisation reçue pour:", req.body.email);  // Log l'email reçu
+
   const { email } = req.body
 
   if (!req.body.email) {
-    res.json({ result: false, error: 'fill the fields' })
+    res.json({ result: false, error: 'fill the fields' });
+    return;
   }
 
   try {
@@ -211,13 +215,12 @@ router.post('/forgotPassword', async (req, res): Promise<void> => {
 
     await transporter.sendMail(mailOptions);
 
-    res.json({ result: true, succes: 'Email de réinitialisation envoyé.' });
+    res.json({ result: true, message: 'Email de réinitialisation envoyé.' });
   } catch (error) {
     console.error(error);
-    res.json({ result: false, error: 'Erreur du serveur.' });
+    res.json({ result: false, message: 'Erreur du serveur.' });
   }
 })
-
 
 router.put('/resetPassword/:resetPasswordToken', async (req, res): Promise<void> => {
   const { newPassword, confirmPassword } = req.body;
@@ -263,6 +266,12 @@ router.put('/resetPassword/:resetPasswordToken', async (req, res): Promise<void>
 
 router.post('/passwordCheck', async (req, res): Promise<void> => {
   try {
+
+    if (!req.body.password) {
+      res.json({ result: false, error: 'fill the fields' });
+      return;
+    }
+
     const userData = await User.findOneAndUpdate({token: req.body.token})
 
     if(!userData){

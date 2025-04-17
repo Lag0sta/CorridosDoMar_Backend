@@ -56,25 +56,51 @@ router.post('/submit', async (req: Request, res: Response): Promise<void> => {
 
 //route pour modifier les infos de l'utilisateur
 router.put('/update', async (req: Request, res: Response) => {
-  const hash = bcrypt.hashSync(req.body.password, 10);
+  if (!req.body.accessToken) {
+    res.status(400).json({ message: 'Token manquant' });
+    return;
+  }
+  
   try {
-    const userData = await User.findOneAndUpdate(
-      { token: req.body.token },
-    {
-      $set: {
-        pseudo: req.body.pseudo,
-        group: req.body.group,
-        email: req.body.email,
-        password: hash
-      }
-    },
-    {new: true});
 
-    if (userData) {
-      res.json({ result: true, user: userData });
+    if (!req.body.password) {
+      const userData = await User.findOneAndUpdate(
+        { accessToken: req.body.accessToken },
+        {
+          $set: {
+            pseudo: req.body.pseudo,
+            group: req.body.group,
+            email: req.body.email,
+          }
+        },
+        { new: true });
+
+      if (userData) {
+        res.json({ result: true, message: "User updated", user: userData });
+      } else {
+        res.json({ result: false, message: "User not found" });
+      }
     } else {
-      res.json({ result: false, message: "User not found" });
-    } 
+      const hash = bcrypt.hashSync(req.body.password, 10);
+      const userData = await User.findOneAndUpdate(
+        { accessToken: req.body.accessToken },
+        {
+          $set: {
+            pseudo: req.body.pseudo,
+            group: req.body.group,
+            email: req.body.email,
+            password: hash
+          }
+        },
+        { new: true });
+
+      if (userData) {
+        res.json({ result: true, message: "User updated", user: userData });
+      } else {
+        res.json({ result: false, message: "User not found" });
+      }
+    }
+
   } catch (error) {
     res.status(500).json({ result: false, message: 'Server error' });
   }

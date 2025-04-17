@@ -59,21 +59,42 @@ router.post('/submit', (req, res) => __awaiter(void 0, void 0, void 0, function*
 }));
 //route pour modifier les infos de l'utilisateur
 router.put('/update', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const hash = bcrypt.hashSync(req.body.password, 10);
+    if (!req.body.accessToken) {
+        res.status(400).json({ message: 'Token manquant' });
+        return;
+    }
     try {
-        const userData = yield users_1.default.findOneAndUpdate({ token: req.body.token }, {
-            $set: {
-                pseudo: req.body.pseudo,
-                group: req.body.group,
-                email: req.body.email,
-                password: hash
+        if (!req.body.password) {
+            const userData = yield users_1.default.findOneAndUpdate({ accessToken: req.body.accessToken }, {
+                $set: {
+                    pseudo: req.body.pseudo,
+                    group: req.body.group,
+                    email: req.body.email,
+                }
+            }, { new: true });
+            if (userData) {
+                res.json({ result: true, message: "User updated", user: userData });
             }
-        }, { new: true });
-        if (userData) {
-            res.json({ result: true, user: userData });
+            else {
+                res.json({ result: false, message: "User not found" });
+            }
         }
         else {
-            res.json({ result: false, message: "User not found" });
+            const hash = bcrypt.hashSync(req.body.password, 10);
+            const userData = yield users_1.default.findOneAndUpdate({ accessToken: req.body.accessToken }, {
+                $set: {
+                    pseudo: req.body.pseudo,
+                    group: req.body.group,
+                    email: req.body.email,
+                    password: hash
+                }
+            }, { new: true });
+            if (userData) {
+                res.json({ result: true, message: "User updated", user: userData });
+            }
+            else {
+                res.json({ result: false, message: "User not found" });
+            }
         }
     }
     catch (error) {

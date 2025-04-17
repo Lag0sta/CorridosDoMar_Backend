@@ -163,6 +163,7 @@ router.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function*
 }));
 router.post('/refresh-token', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const refreshToken = req.cookies.refreshToken; // Lire le refresh token du cookie
+    console.log('Refresh token reçu:', refreshToken);
     if (!refreshToken) {
         return void res.status(401).json({ result: false, error: 'Refresh token manquant' });
     }
@@ -185,9 +186,11 @@ router.post('/refresh-token', (req, res) => __awaiter(void 0, void 0, void 0, fu
     }
 }));
 router.post('/forgotPassword', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("Demande de réinitialisation reçue pour:", req.body.email); // Log l'email reçu
     const { email } = req.body;
     if (!req.body.email) {
         res.json({ result: false, error: 'fill the fields' });
+        return;
     }
     try {
         const user = yield users_1.default.findOne({ email });
@@ -217,11 +220,11 @@ router.post('/forgotPassword', (req, res) => __awaiter(void 0, void 0, void 0, f
              <p>Cliquez sur ce lien pour le réinitialiser : <a href="${resetUrl}">Réinitialiser le mot de passe</a></p>`,
         };
         yield transporter.sendMail(mailOptions);
-        res.json({ result: true, succes: 'Email de réinitialisation envoyé.' });
+        res.json({ result: true, message: 'Email de réinitialisation envoyé.' });
     }
     catch (error) {
         console.error(error);
-        res.json({ result: false, error: 'Erreur du serveur.' });
+        res.json({ result: false, message: 'Erreur du serveur.' });
     }
 }));
 router.put('/resetPassword/:resetPasswordToken', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -259,6 +262,10 @@ router.put('/resetPassword/:resetPasswordToken', (req, res) => __awaiter(void 0,
 }));
 router.post('/passwordCheck', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        if (!req.body.password) {
+            res.json({ result: false, error: 'fill the fields' });
+            return;
+        }
         const userData = yield users_1.default.findOneAndUpdate({ token: req.body.token });
         if (!userData) {
             res.json({ result: false, message: "User not found" });
