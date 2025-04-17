@@ -93,20 +93,22 @@ router.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function*
             res.json({ result: false, error: "wrong email or password" });
             return;
         }
-        // Génération du token
         // Mettre à jour l'utilisateur avec le nouvel accessToken
-        yield users_1.default.findByIdAndUpdate(userData.id, {
-            accessToken: uid2(32),
-        });
+        const newToken = uid2(32);
+        const updatedUser = yield users_1.default.findByIdAndUpdate(userData.id, { accessToken: newToken }, { new: true });
+        if (!updatedUser) {
+            res.json({ result: false, error: "user not found" });
+            return;
+        }
         // Ensuite, envoie la réponse avec les données de l'utilisateur
         res.json({
             result: true,
-            avatar: userData.avatar,
-            pseudo: userData.pseudo,
-            capoeiraGroup: userData.capoeiraGroup,
-            email: userData.email,
-            submits: userData.submits,
-            accessToken: userData.accessToken,
+            avatar: updatedUser.avatar,
+            pseudo: updatedUser.pseudo,
+            capoeiraGroup: updatedUser.capoeiraGroup,
+            email: updatedUser.email,
+            submits: updatedUser.submits,
+            accessToken: updatedUser.accessToken,
         });
     }
     catch (error) {

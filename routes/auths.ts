@@ -94,22 +94,28 @@ router.post('/signin', async (req: Request, res: Response) => {
       res.json({ result: false, error: "wrong email or password" });
       return;
     }
-    // Génération du token
 
-     // Mettre à jour l'utilisateur avec le nouvel accessToken
-     await User.findByIdAndUpdate(userData.id, {
-      accessToken: uid2(32),
-    });
+    // Mettre à jour l'utilisateur avec le nouvel accessToken
+    const newToken = uid2(32);
+    const updatedUser = await User.findByIdAndUpdate(
+      userData.id,
+      { accessToken: newToken },
+      { new: true }
+    );
 
+    if(!updatedUser) {
+      res.json({ result: false, error: "user not found" });
+      return;
+    }
     // Ensuite, envoie la réponse avec les données de l'utilisateur
     res.json({
       result: true,
-      avatar: userData.avatar,
-      pseudo: userData.pseudo,
-      capoeiraGroup: userData.capoeiraGroup,
-      email: userData.email,
-      submits: userData.submits,
-      accessToken: userData.accessToken,
+      avatar: updatedUser.avatar,
+      pseudo: updatedUser.pseudo,
+      capoeiraGroup: updatedUser.capoeiraGroup,
+      email: updatedUser.email,
+      submits: updatedUser.submits,
+      accessToken: updatedUser.accessToken,
     });
   } catch (error) {
     console.error(error);
@@ -137,7 +143,7 @@ router.post('/forgotPassword', async (req, res): Promise<void> => {
     const resetToken = crypto.randomBytes(32).toString('hex');
     user.resetPasswordToken = resetToken;
     user.resetPasswordExpires = new Date(Date.now() + 3600000);
-     await user.save();    
+    await user.save();
 
     const mailMdp = process.env.MDP_MAIL
     const mail = process.env.MAIL
@@ -220,9 +226,9 @@ router.post('/passwordCheck', async (req, res): Promise<void> => {
       return;
     }
 
-    const userData = await User.findOneAndUpdate({token: req.body.token})
+    const userData = await User.findOneAndUpdate({ token: req.body.token })
 
-    if(!userData){
+    if (!userData) {
       res.json({ result: false, message: "User not found" });
       return;
     }
