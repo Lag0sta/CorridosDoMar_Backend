@@ -57,13 +57,7 @@ const app = (0, express_1.default)();
 // Activer CORS
 const cors = require('cors');
 const { cp } = require('fs');
-const corsOptions = {
-    origin: 'http://localhost:3001', // Change cela par l'URL de ton frontend
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Définir les méthodes autorisées
-    allowedHeaders: ['Content-Type', 'Authorization'], // Autoriser les en-têtes spécifiques
-    credentials: true, // Autoriser l'envoi de cookies (important pour les tokens)
-};
-app.use(cors(corsOptions));
+app.use(cors());
 // Définir les middlewares
 app.use((0, morgan_1.default)('dev'));
 app.use(express_1.default.json());

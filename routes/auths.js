@@ -1,37 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -47,11 +14,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const users_1 = __importDefault(require("../models/users"));
-const jwt = __importStar(require("jsonwebtoken"));
-const JWT_1 = require("../utils/JWT");
 const router = express_1.default.Router();
 const nodemailer = require('nodemailer');
 const bcrypt = require("bcryptjs");
+const crypto = require('crypto');
+const uid2 = require('uid2');
 /* GET users listing. */
 router.get('/', (req, res) => {
     users_1.default.find().then((data) => {
@@ -89,7 +56,6 @@ router.post('/signup', (req, res) => __awaiter(void 0, void 0, void 0, function*
             capoeiraGroup: req.body.capoeiraGroup,
             email: req.body.email,
             password: hash,
-            refreshToken: "",
             resetPasswordToken: "",
             resetPasswordExpires: "",
         });
@@ -127,25 +93,12 @@ router.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function*
             res.json({ result: false, error: "wrong email or password" });
             return;
         }
-        // Génération du token JWT avec generateJWT
-        const accessToken = (0, JWT_1.generateJWT)(userData.id, userData.email);
-        // Génération du refreshToken
-        const refreshToken = jwt.sign({ userId: userData.id }, process.env.REFRESHSECRETTOKEN_KEY, { expiresIn: '7d' } // Durée de vie plus longue (7 jours)
-        );
+        // Génération du token
         // Mettre à jour l'utilisateur avec le nouvel accessToken
         yield users_1.default.findByIdAndUpdate(userData.id, {
-            accessToken: accessToken,
-        });
-        // Envoi du refreshToken dans un cookie httpOnly
-        res.cookie('refreshToken', refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // seulement en prod (HTTPS)
-            sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
+            accessToken: uid2(32),
         });
         // Ensuite, envoie la réponse avec les données de l'utilisateur
-        res.header('Access-Control-Allow-Origin', 'http://localhost:3001'); // Frontend
-        res.header('Access-Control-Allow-Credentials', 'true'); // Autorise les cookies
         res.json({
             result: true,
             avatar: userData.avatar,
@@ -153,7 +106,7 @@ router.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function*
             capoeiraGroup: userData.capoeiraGroup,
             email: userData.email,
             submits: userData.submits,
-            accessToken,
+            accessToken: userData.accessToken,
         });
     }
     catch (error) {
@@ -161,32 +114,7 @@ router.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.json({ result: false, error: 'error signing in' });
     }
 }));
-router.post('/refresh-token', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const refreshToken = req.cookies.refreshToken; // Lire le refresh token du cookie
-    console.log('Refresh token reçu:', refreshToken);
-    if (!refreshToken) {
-        return void res.status(401).json({ result: false, error: 'Refresh token manquant' });
-    }
-    try {
-        // Vérifier le refresh token
-        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
-        const userData = yield users_1.default.findById(decoded.userId);
-        if (!userData) {
-            return void res.status(404).json({ result: false, error: 'Utilisateur non trouvé' });
-        }
-        // Créer un nouveau accessToken
-        const accessToken = (0, JWT_1.generateJWT)(userData.id, userData.email);
-        // Répondre avec le nouveau accessToken
-        res.header('Access-Control-Allow-Origin', 'http://localhost:3001'); // Frontend
-        res.header('Access-Control-Allow-Credentials', 'true'); // Autorise les cookies
-        res.json({ accessToken });
-    }
-    catch (err) {
-        return void res.status(403).json({ result: false, error: 'Refresh token invalide ou expiré' });
-    }
-}));
 router.post('/forgotPassword', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("Demande de réinitialisation reçue pour:", req.body.email); // Log l'email reçu
     const { email } = req.body;
     if (!req.body.email) {
         res.json({ result: false, error: 'fill the fields' });
@@ -198,9 +126,10 @@ router.post('/forgotPassword', (req, res) => __awaiter(void 0, void 0, void 0, f
             res.json({ result: false, error: 'User not found.' });
             return;
         }
-        const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
-            expiresIn: '1h'
-        });
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpires = new Date(Date.now() + 3600000);
+        yield user.save();
         const mailMdp = process.env.MDP_MAIL;
         const mail = process.env.MAIL;
         const service = process.env.SERVICE;
@@ -211,7 +140,7 @@ router.post('/forgotPassword', (req, res) => __awaiter(void 0, void 0, void 0, f
                 pass: `${mailMdp}`,
             },
         });
-        const resetUrl = `http://localhost:3001/resetPassword/${token}`;
+        const resetUrl = `http://localhost:3001/resetPassword/${resetToken}`;
         const mailOptions = {
             from: `${mail}`,
             to: `${email}`,

@@ -1,21 +1,20 @@
 import express from 'express';
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/users';
-import * as jwt from 'jsonwebtoken';
-import { generateJWT } from '../utils/JWT';
 
 const router = express.Router();
 
 const nodemailer = require('nodemailer');
 
 const bcrypt = require("bcryptjs");
+const crypto = require('crypto');
+const uid2 = require('uid2');
 
 
 /* GET users listing. */
 router.get('/', (req, res) => {
   User.find().then((data) => {
     res.json(data)
-
   })
 })
 
@@ -54,7 +53,6 @@ router.post('/signup', async (req, res) => {
       capoeiraGroup: req.body.capoeiraGroup,
       email: req.body.email,
       password: hash,
-      refreshToken: "",
       resetPasswordToken: "",
       resetPasswordExpires: "",
     });
@@ -96,32 +94,14 @@ router.post('/signin', async (req: Request, res: Response) => {
       res.json({ result: false, error: "wrong email or password" });
       return;
     }
-    // Génération du token JWT avec generateJWT
-    const accessToken = generateJWT(userData.id, userData.email!);
-
-    // Génération du refreshToken
-    const refreshToken = jwt.sign(
-      { userId: userData.id },
-      process.env.REFRESHSECRETTOKEN_KEY!,
-      { expiresIn: '7d' } // Durée de vie plus longue (7 jours)
-    );
+    // Génération du token
 
      // Mettre à jour l'utilisateur avec le nouvel accessToken
      await User.findByIdAndUpdate(userData.id, {
-      accessToken: accessToken,
-    });
-
-    // Envoi du refreshToken dans un cookie httpOnly
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // seulement en prod (HTTPS)
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
+      accessToken: uid2(32),
     });
 
     // Ensuite, envoie la réponse avec les données de l'utilisateur
-    res.header('Access-Control-Allow-Origin', 'http://localhost:3001');  // Frontend
-    res.header('Access-Control-Allow-Credentials', 'true');  // Autorise les cookies
     res.json({
       result: true,
       avatar: userData.avatar,
@@ -129,7 +109,7 @@ router.post('/signin', async (req: Request, res: Response) => {
       capoeiraGroup: userData.capoeiraGroup,
       email: userData.email,
       submits: userData.submits,
-      accessToken,
+      accessToken: userData.accessToken,
     });
   } catch (error) {
     console.error(error);
@@ -137,41 +117,8 @@ router.post('/signin', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/refresh-token', async (req: Request, res: Response) => {
-  const refreshToken = req.cookies.refreshToken; // Lire le refresh token du cookie
-  console.log('Refresh token reçu:', refreshToken);
-
-  if (!refreshToken) {
-    return void
-      res.status(401).json({ result: false, error: 'Refresh token manquant' });
-  }
-
-  try {
-    // Vérifier le refresh token
-    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!) as any;
-    const userData = await User.findById(decoded.userId);
-
-    if (!userData) {
-      return void
-        res.status(404).json({ result: false, error: 'Utilisateur non trouvé' });
-    }
-
-    // Créer un nouveau accessToken
-    const accessToken = generateJWT(userData.id, userData.email!);
-
-    // Répondre avec le nouveau accessToken
-    res.header('Access-Control-Allow-Origin', 'http://localhost:3001');  // Frontend
-    res.header('Access-Control-Allow-Credentials', 'true');  // Autorise les cookies
-    res.json({ accessToken });
-  } catch (err) {
-    return void
-      res.status(403).json({ result: false, error: 'Refresh token invalide ou expiré' });
-  }
-});
 
 router.post('/forgotPassword', async (req, res): Promise<void> => {
-  console.log("Demande de réinitialisation reçue pour:", req.body.email);  // Log l'email reçu
-
   const { email } = req.body
 
   if (!req.body.email) {
@@ -187,9 +134,10 @@ router.post('/forgotPassword', async (req, res): Promise<void> => {
       return;
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY!, {
-      expiresIn: '1h'
-    });
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = new Date(Date.now() + 3600000);
+     await user.save();    
 
     const mailMdp = process.env.MDP_MAIL
     const mail = process.env.MAIL
@@ -203,7 +151,7 @@ router.post('/forgotPassword', async (req, res): Promise<void> => {
       },
     });
 
-    const resetUrl = `http://localhost:3001/resetPassword/${token}`;
+    const resetUrl = `http://localhost:3001/resetPassword/${resetToken}`;
 
     const mailOptions = {
       from: `${mail}`,
