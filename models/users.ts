@@ -10,7 +10,6 @@ const usersSchema = new mongoose.Schema({
   accessToken: String,
   resetPasswordToken: String,
   resetPasswordExpires: Date,
-  submits: [{ type: mongoose.Schema.Types.ObjectId, ref: 'submits' }]
 
 });
 

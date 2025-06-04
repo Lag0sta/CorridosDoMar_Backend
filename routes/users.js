@@ -32,7 +32,6 @@ router.post('/userProfil', (req, res) => __awaiter(void 0, void 0, void 0, funct
                 pseudo: user.pseudo,
                 group: user.capoeiraGroup,
                 email: user.email,
-                submits: user.submits
             });
         }
         else {
@@ -99,6 +98,40 @@ router.put('/update', (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
     catch (error) {
         res.status(500).json({ result: false, message: 'Server error' });
+    }
+}));
+//route pour modifier le mot de passe
+router.put('/resetPassword/:resetPasswordToken', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { newPassword, confirmPassword } = req.body;
+    const token = req.params.resetPasswordToken;
+    if (!token) {
+        res.json({ result: false, error: 'Token requis' });
+    }
+    if (!newPassword || !confirmPassword) {
+        res.json({ result: false, error: 'Veuillez remplir tous les champs.' });
+    }
+    if (newPassword !== confirmPassword) {
+        res.json({ result: false, error: 'Les mots de passe ne correspondent pas.' });
+    }
+    try {
+        const user = yield users_1.default.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() },
+        });
+        if (!user) {
+            res.json({ result: false, error: "Token invalide ou expiré." });
+        }
+        // Hash du nouveau mot de passe  
+        const hashedPassword = yield bcrypt.hash(newPassword, 10);
+        yield users_1.default.updateOne({ resetPasswordToken: token }, {
+            $set: { password: hashedPassword, resetPasswordToken: "", resetPasswordExpires: null },
+        });
+        console.log('Mot de passe mis à jour avec succès.');
+        res.json({ result: true, succes: 'Mot de passe mis à jour avec succès.' });
+    }
+    catch (error) {
+        console.error(error);
+        res.json({ result: false, error: 'Erreur lors de la mise à jour du mot de passe.' });
     }
 }));
 exports.default = router;

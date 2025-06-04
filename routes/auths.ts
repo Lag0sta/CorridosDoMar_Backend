@@ -1,6 +1,7 @@
 import express from 'express';
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/users';
+import Submit from '../models/submits';
 
 const router = express.Router();
 
@@ -114,7 +115,6 @@ router.post('/signin', async (req: Request, res: Response) => {
       pseudo: updatedUser.pseudo,
       capoeiraGroup: updatedUser.capoeiraGroup,
       email: updatedUser.email,
-      submits: updatedUser.submits,
       accessToken: updatedUser.accessToken,
     });
   } catch (error) {
@@ -176,48 +176,6 @@ router.post('/forgotPassword', async (req, res): Promise<void> => {
   }
 })
 
-router.put('/resetPassword/:resetPasswordToken', async (req, res): Promise<void> => {
-  const { newPassword, confirmPassword } = req.body;
-  const token = req.params.resetPasswordToken;
-  if (!token) {
-    res.json({ result: false, error: 'Token requis' });
-  }
-
-  if (!newPassword || !confirmPassword) {
-    res.json({ result: false, error: 'Veuillez remplir tous les champs.' });
-  }
-
-  if (newPassword !== confirmPassword) {
-    res.json({ result: false, error: 'Les mots de passe ne correspondent pas.' });
-  }
-
-  try {
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() },
-    });
-
-    if (!user) {
-      res.json({ result: false, error: "Token invalide ou expiré." });
-    }
-    // Hash du nouveau mot de passe  
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    await User.updateOne(
-      { resetPasswordToken: token },
-      {
-        $set: { password: hashedPassword, resetPasswordToken: "", resetPasswordExpires: null },
-      }
-    );
-    console.log('Mot de passe mis à jour avec succès.')
-
-    res.json({ result: true, succes: 'Mot de passe mis à jour avec succès.' });
-  } catch (error) {
-    console.error(error);
-    res.json({ result: false, error: 'Erreur lors de la mise à jour du mot de passe.' });
-  }
-})
-
 router.post('/passwordCheck', async (req, res): Promise<void> => {
   try {
 
@@ -242,6 +200,26 @@ router.post('/passwordCheck', async (req, res): Promise<void> => {
       return;
     }
   } catch (error) {
+    res.status(500).json({ result: false, message: 'Server error' });
+  }
+})
+
+//route pour confirmer le user _id pour modifier les submits
+router.post('/editSubmit', async (req, res): Promise<void> => {
+  try {
+    const userData = await User.findOne({ accessToken: req.body.accessToken })  
+    console.log(userData)
+    
+    if(!userData){
+      res.json({ result: false, message: "User not found" });
+      return;
+    }
+
+    if(userData._id.toString() === req.body._id){
+      res.json({ result: true, message: "Access granted" });
+      return;
+    }
+  }catch (error) {
     res.status(500).json({ result: false, message: 'Server error' });
   }
 })
